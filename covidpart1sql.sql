@@ -49,3 +49,40 @@ from CovidDeaths
 where continent is not null
 group by date
 order by sum_of_new_cases desc;
+
+
+with popvsvac(continent,location,date,population,new_vaccination,rolling_people_vaccinated)
+as
+
+(select dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,
+sum(cast(vac.new_vaccinations as int )) over(partition by dea.location order by dea.location , dea.date) as rolling_people_vaccinated
+from protofolio..CovidVaccinations vac
+join  protofolio..CovidDeaths dea
+on vac.location = dea.location
+and vac.date = dea.date
+where dea.continent is not null
+--order by 2,3
+)
+select *,
+(rolling_people_vaccinated/ population)* 100
+from popvsvac
+
+-- Temp table
+drop table if exists #percentpopulationvaccinated
+create table #percentpopulationvaccinated(
+continent nvarchar(255)
+,location nvarchar(255),
+date datetime,
+population numeric
+,new_vaccination numeric
+,rolling_people_vaccinated numeric
+)
+insert into #percentpopulationvaccinated
+select dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,
+sum(cast(vac.new_vaccinations as int )) over(partition by dea.location order by dea.location , dea.date) as rolling_people_vaccinated
+from protofolio..CovidVaccinations vac
+join  protofolio..CovidDeaths dea
+on vac.location = dea.location
+and vac.date = dea.date
+where dea.continent is not null
+--order by 2,3
